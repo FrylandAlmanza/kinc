@@ -5,7 +5,7 @@ and may not be redistributed without written permission.*/
 #include <SDL.h>
 #include <SDL_image.h>
 #include <stdio.h>
-#include <string>
+#include <stdbool.h>
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 256;
@@ -22,13 +22,13 @@ SDL_Renderer* gRenderer = NULL;
 //Scene sprites
 SDL_Rect sprites[4];
 
-bool loadSheetFromFile(char[256] path)
+bool loadSheetFromFile(char path[256])
 {
 	//Load image at specified path
 	SDL_Surface* loadedSurface = IMG_Load(path);
 	if( loadedSurface == NULL )
 	{
-		printf( "Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError() );
+		printf( "Unable to load image %s! SDL_image Error: %s\n", path, IMG_GetError() );
 	}
 	else
 	{
@@ -224,7 +224,7 @@ int main( int argc, char* args[] )
 				SDL_RenderClear( gRenderer );
 
 				//Render top left sprite
-				renderSprite( 0, 0, &gSpriteClips[ 0 ] );
+				renderSprite( 0, 0, &sprites[ 0 ] );
 
 				//Update screen
 				SDL_RenderPresent( gRenderer );
