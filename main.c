@@ -64,7 +64,7 @@ bool init()
 
 bool loadMedia()
 {
-    loadSheetFromFile("spritesheet.png");
+    loadSheetFromFile("assets/spritesheet.png");
 
     //link
     sprites[0].x = 0;
