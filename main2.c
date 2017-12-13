@@ -9,16 +9,36 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include <stdbool.h>
 
+enum sprite {
+    sprKink,
+    sprWallNW,
+    sprWallN,
+    sprWallNE,
+    sprWallSW,
+    sprWallS,
+    sprWallSE,
+    sprGround
+};
+
 struct player {
     int x;
     int y;
+    int w;
+    int h;
+    int xSpeed;
+    int ySpeed;
 };
 
 struct tile {
     int x;
     int y;
-    SDL_Rect sprite;
+    int w;
+    int h;
+    bool solid;
+    enum sprite sprite;
 };
+
+struct tile tiles[240];
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 256;
@@ -137,6 +157,36 @@ void close()
     SDL_Quit();
 }
 
+bool collides(struct player player, struct tile tile) {
+    int aa = player.x;
+    int ab = player.x + player.w;
+    int ac = player.y;
+    int ad = player.y + player.h;
+
+    int ba = tile.x;
+    int bb = tile.x + tile.w;
+    int bc = tile.y;
+    int bd = tile.y + tile.h;
+    
+    if (ab > ba && aa < bb && ad > bc && ac < bd) {
+        return true;
+    }
+    return false;
+}
+
+bool playerCollision(struct player player) {
+    for (int y = 0; y < 15; y++) {
+        for (int x = 0; x < 16; x++) {
+            if (!tiles[(y * 16) + x].solid) continue;
+            if (collides(player, tiles[(y * 16) + x])) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 int main(int argc, char* args[])
 {
     //Start up SDL and create window
@@ -148,29 +198,32 @@ int main(int argc, char* args[])
     bool right = false;
     bool down = false;
     bool left = false;
-    struct player player = {0, 0};
-    struct tile tiles[240];
+    struct player player = {16, 16, 16, 16, 0, 0};
     struct tile tempTile;
+    tempTile.w = 16;
+    tempTile.h = 16;
     for (int y = 0; y < 15; y++) {
         for (int x = 0; x < 16; x++) {
             tempTile.x = x * 16;
             tempTile.y = y * 16;
+            tempTile.solid = true;
             if (x == 2 && y == 2) {
-                tempTile.sprite = sprites[1];
+                tempTile.sprite = sprWallNW;
             } else if (x == 3 && y == 2) {
-                tempTile.sprite = sprites[2];
+                tempTile.sprite = sprWallN;
             } else if (x == 4 && y == 2) {
-                tempTile.sprite = sprites[3];
+                tempTile.sprite = sprWallNE;
             } else if (x == 2 && y == 3) {
-                tempTile.sprite = sprites[4];
+                tempTile.sprite = sprWallSW;
             } else if (x == 3 && y == 3) {
-                tempTile.sprite = sprites[5];
+                tempTile.sprite = sprWallS;
             } else if (x == 4 && y == 3) {
-                tempTile.sprite = sprites[6];
+                tempTile.sprite = sprWallSE;
             } else if (x == 0 || y == 0 || x == 15 || y == 14) {
-                tempTile.sprite = sprites[5];
+                tempTile.sprite = sprWallS;
             } else {
-                tempTile.sprite = sprites[7];
+                tempTile.sprite = sprGround;
+                tempTile.solid = false;
             }
             tiles[(y * 16) + x] = tempTile;
         }
@@ -227,17 +280,44 @@ int main(int argc, char* args[])
             }
         }
 
+        player.xSpeed = 0;
+        player.ySpeed = 0;
         if (up) {
-            player.y -= 1;
+            player.ySpeed = -1;
         }
         if (right) {
-            player.x += 1;
+            player.xSpeed = 1;
         }
         if (down) {
-            player.y += 1;
+            player.ySpeed = 1;
         }
         if (left) {
-            player.x -= 1;
+            player.xSpeed = -1;
+        }
+
+        player.x += player.xSpeed;
+        player.y += player.ySpeed;
+
+        if (playerCollision(player)) {
+            bool resolved = false;
+            player.x -= player.xSpeed;
+            if (playerCollision(player)) {
+                player.x += player.xSpeed;
+            } else {
+                resolved = true;
+            }
+            if (!resolved) {
+                player.y -= player.ySpeed;
+                if (playerCollision(player)) {
+                    player.y += player.ySpeed;
+                } else {
+                    resolved = true;
+                }
+            }
+            if (!resolved) {
+                player.x -= player.xSpeed;
+                player.y -= player.ySpeed;
+            }
         }
 
         //Clear screen
@@ -247,17 +327,22 @@ int main(int argc, char* args[])
         for (int y = 0; y < 15; y++) {
             for (int x = 0; x < 16; x++) {
                 int i = (y * 16) + x;
-                renderSprite(tiles[i].x, tiles[i].y, &tiles[i].sprite);
+                renderSprite(tiles[i].x, tiles[i].y, &sprites[tiles[i].sprite]);
             }
         }
 
         //Render top left sprite
-        renderSprite(player.x, player.y, &sprites[0]);
+        renderSprite(player.x, player.y, &sprites[sprKink]);
+
+        if (playerCollision(player)) {
+            renderSprite(100, 100, &sprites[sprKink]);
+        }
 
         //Update screen
         SDL_RenderPresent(gRenderer);
 
-	usleep(16666);
+
+	    usleep(16666);
     }
 
     //Free resources and close SDL
