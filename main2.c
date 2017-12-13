@@ -9,6 +9,17 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include <stdbool.h>
 
+struct player {
+    int x;
+    int y;
+};
+
+struct tile {
+    int x;
+    int y;
+    SDL_Rect sprite;
+};
+
 //Screen dimension constants
 const int SCREEN_WIDTH = 256;
 const int SCREEN_HEIGHT = 240;
@@ -22,7 +33,7 @@ SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 
 //Scene sprites
-SDL_Rect sprites[4];
+SDL_Rect sprites[8];
 
 void loadSheetFromFile(char path[256])
 {
@@ -59,31 +70,55 @@ bool init()
 
 bool loadMedia()
 {
-    loadSheetFromFile("kinknew.png");
+    loadSheetFromFile("spritesheet.png");
 
-    //Set top left sprite
+    //link
     sprites[0].x = 0;
     sprites[0].y = 0;
     sprites[0].w = 16;
     sprites[0].h = 16;
 
-    //Set top right sprite
-    sprites[1].x = 16;
+    //tile1
+    sprites[1].x = 32;
     sprites[1].y = 0;
     sprites[1].w = 16;
     sprites[1].h = 16;
-
-    //Set bottom left sprite
-    sprites[2].x = 0;
-    sprites[2].y = 16;
+    
+    //tile2
+    sprites[2].x = 48;
+    sprites[2].y = 0;
     sprites[2].w = 16;
     sprites[2].h = 16;
-
-    //Set bottom right sprite
-    sprites[3].x = 16;
-    sprites[3].y = 16;
+    
+    //tile3
+    sprites[3].x = 64;
+    sprites[3].y = 0;
     sprites[3].w = 16;
     sprites[3].h = 16;
+
+    //tile4
+    sprites[4].x = 32;
+    sprites[4].y = 16;
+    sprites[4].w = 16;
+    sprites[4].h = 16;
+    
+    //tile5
+    sprites[5].x = 48;
+    sprites[5].y = 16;
+    sprites[5].w = 16;
+    sprites[5].h = 16;
+    
+    //tile6
+    sprites[6].x = 64;
+    sprites[6].y = 16;
+    sprites[6].w = 16;
+    sprites[6].h = 16;
+
+    //tile7
+    sprites[7].x = 32;
+    sprites[7].y = 32;
+    sprites[7].w = 16;
+    sprites[7].h = 16;
 }
 
 void close()
@@ -113,8 +148,33 @@ int main(int argc, char* args[])
     bool right = false;
     bool down = false;
     bool left = false;
-    int x = 0;
-    int y = 0;
+    struct player player = {0, 0};
+    struct tile tiles[240];
+    struct tile tempTile;
+    for (int y = 0; y < 15; y++) {
+        for (int x = 0; x < 16; x++) {
+            tempTile.x = x * 16;
+            tempTile.y = y * 16;
+            if (x == 2 && y == 2) {
+                tempTile.sprite = sprites[1];
+            } else if (x == 3 && y == 2) {
+                tempTile.sprite = sprites[2];
+            } else if (x == 4 && y == 2) {
+                tempTile.sprite = sprites[3];
+            } else if (x == 2 && y == 3) {
+                tempTile.sprite = sprites[4];
+            } else if (x == 3 && y == 3) {
+                tempTile.sprite = sprites[5];
+            } else if (x == 4 && y == 3) {
+                tempTile.sprite = sprites[6];
+            } else if (x == 0 || y == 0 || x == 15 || y == 14) {
+                tempTile.sprite = sprites[5];
+            } else {
+                tempTile.sprite = sprites[7];
+            }
+            tiles[(y * 16) + x] = tempTile;
+        }
+    }
 
     //Event handler
     SDL_Event e;
@@ -168,24 +228,31 @@ int main(int argc, char* args[])
         }
 
         if (up) {
-            y -= 1;
+            player.y -= 1;
         }
         if (right) {
-            x += 1;
+            player.x += 1;
         }
         if (down) {
-            y += 1;
+            player.y += 1;
         }
         if (left) {
-            x -= 1;
+            player.x -= 1;
         }
 
         //Clear screen
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderClear(gRenderer);
 
+        for (int y = 0; y < 15; y++) {
+            for (int x = 0; x < 16; x++) {
+                int i = (y * 16) + x;
+                renderSprite(tiles[i].x, tiles[i].y, &tiles[i].sprite);
+            }
+        }
+
         //Render top left sprite
-        renderSprite(x, y, &sprites[0]);
+        renderSprite(player.x, player.y, &sprites[0]);
 
         //Update screen
         SDL_RenderPresent(gRenderer);
