@@ -13,8 +13,8 @@ and may not be redistributed without written permission.*/
 #include "sprites.h"
 
 //Screen dimension constants
-const int SCREEN_WIDTH = 256;
-const int SCREEN_HEIGHT = 240;
+const int SCREEN_WIDTH = 512;
+const int SCREEN_HEIGHT = 480;
 
 SDL_Texture* spritesheet;
 
@@ -54,10 +54,11 @@ void renderSprite(int x, int y, SDL_Rect* clip)
 bool init()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_RenderSetScale(gRenderer, 2, 2);
     int imgFlags = IMG_INIT_PNG;
     IMG_Init(imgFlags);
 }
