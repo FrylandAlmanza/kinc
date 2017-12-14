@@ -29,6 +29,8 @@ SDL_Rect sprites[8];
 
 Entity tiles[240];
 
+char* overworld;
+
 void loadSheetFromFile(char path[256])
 {
     SDL_Surface* loadedSurface = IMG_Load(path);
@@ -174,35 +176,56 @@ int main(int argc, char* args[])
     bool down = false;
     bool left = false;
     Entity player;
-    player.x = 16;
-    player.y = 16;
+    player.x = 64;
+    player.y = 64;
     player.w = 16;
     player.h = 16;
     Entity tempTile;
     tempTile.w = 16;
     tempTile.h = 16;
+    overworld = ""
+"#######..#######"
+"#### #'..#######"
+"###'.....#######"
+"##'......#######"
+"#'.......`######"
+"................"
+"#!.............#"
+"##.............#"
+"##.............#"
+"################"
+"                "
+" . . . .  . ... "
+" ..  . .. .   . "
+" . . . . ..  .  "
+" . . . .  . ... ";
+    printf(overworld);
+    int cursor;
+    char tileChar;
     for (int y = 0; y < 15; y++) {
         for (int x = 0; x < 16; x++) {
+            cursor = (y * 16) + x;
+            tileChar = overworld[cursor];
             tempTile.x = x * 16;
             tempTile.y = y * 16;
             tempTile.solid = true;
-            if (x == 2 && y == 2) {
+            if (tileChar == '/') {
                 tempTile.sprite = sprWallNW;
-            } else if (x == 3 && y == 2) {
+            } else if (tileChar == '-') {
                 tempTile.sprite = sprWallN;
-            } else if (x == 4 && y == 2) {
+            } else if (tileChar == '!') {
                 tempTile.sprite = sprWallNE;
-            } else if (x == 2 && y == 3) {
+            } else if (tileChar == '`') {
                 tempTile.sprite = sprWallSW;
-            } else if (x == 3 && y == 3) {
+            } else if (tileChar == '#') {
                 tempTile.sprite = sprWallS;
-            } else if (x == 4 && y == 3) {
+            } else if (tileChar == '\'') {
                 tempTile.sprite = sprWallSE;
-            } else if (x == 0 || y == 0 || x == 15 || y == 14) {
-                tempTile.sprite = sprWallS;
-            } else {
+            } else if (tileChar == '.') {
                 tempTile.sprite = sprGround;
                 tempTile.solid = false;
+            } else {
+                tempTile.sprite = sprWallS;
             }
             tiles[(y * 16) + x] = tempTile;
         }
