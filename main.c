@@ -2,6 +2,7 @@
 and may not be redistributed without written permission.*/
 
 #include <time.h>
+#include <unistd.h>
 
 //Using SDL, SDL_image, standard math, and strings
 #include <SDL.h>
@@ -53,19 +54,19 @@ void renderSprite(int x, int y, SDL_Rect* clip)
     SDL_RenderCopy(gRenderer, spritesheet, clip, &renderQuad);
 }
 
-bool init()
+void init()
 {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+    gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_SOFTWARE);
     SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
     SDL_RenderSetScale(gRenderer, 2, 2);
     int imgFlags = IMG_INIT_PNG;
     IMG_Init(imgFlags);
 }
 
-bool loadMedia()
+void loadMedia()
 {
     loadSheetFromFile("assets/spritesheet.png");
 
@@ -118,7 +119,7 @@ bool loadMedia()
     sprites[7].h = 16;
 }
 
-void close()
+void stopit()
 {
     //Free loaded images
     freeSheet();
@@ -199,7 +200,6 @@ int main(int argc, char* args[])
 " ..  . .. .   . "
 " . . . . ..  .  "
 " . . . .  . ... ";
-    printf(overworld);
     int cursor;
     char tileChar;
     for (int y = 0; y < 15; y++) {
@@ -344,11 +344,11 @@ int main(int argc, char* args[])
         SDL_RenderPresent(gRenderer);
 
 
-	    usleep(16666);
+        usleep(16666);
     }
 
     //Free resources and close SDL
-    close();
+    stopit();
 
     return 0;
 }
