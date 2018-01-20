@@ -1,14 +1,12 @@
 /*This source code copyrighted by Lazy Foo' Productions (2004-2015)
 and may not be redistributed without written permission.*/
 
-#include <time.h>
-#include <unistd.h>
-
 //Using SDL, SDL_image, standard math, and strings
 #include <SDL.h>
 #include <SDL_image.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <emscripten.h>
 
 #include "entity.h"
 #include "sprites.h"
@@ -17,59 +15,156 @@ and may not be redistributed without written permission.*/
 const int SCREEN_WIDTH = 512;
 const int SCREEN_HEIGHT = 480;
 
-SDL_Texture* spritesheet;
-
-//The window we'll be rendering to
-SDL_Window* gWindow = NULL;
-
-//The window renderer
-SDL_Renderer* gRenderer = NULL;
-
-//Scene sprites
 SDL_Rect sprites[8];
 
-Entity tiles[240];
-
-char* overworld;
-
-void loadSheetFromFile(char path[256])
+struct context
 {
-    SDL_Surface* loadedSurface = IMG_Load(path);
-    SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xFF, 0xFF ));
-    spritesheet = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-    SDL_FreeSurface(loadedSurface);
+    SDL_Renderer *renderer;
+    SDL_Texture *spritesheet;
+    Entity player;
+    Entity tiles[240];
+    bool up;
+    bool down;
+    bool left;
+    bool right;
+};
+
+int loadSpritesheet(struct context *ctx)
+{
+    SDL_Surface *image = IMG_Load("assets/spritesheet.png");
+    if (!image)
+    {
+        printf("IMG_Load: %s\n", IMG_GetError());
+        return 0;
+    }
+    SDL_SetColorKey(image, SDL_TRUE, SDL_MapRGB(image->format, 0, 0xFF, 0xFF ));
+    ctx->spritesheet = SDL_CreateTextureFromSurface(ctx->renderer, image);
+
+    SDL_FreeSurface(image);
+
+    return 1;
 }
 
-void freeSheet()
-{
-    SDL_DestroyTexture(spritesheet);
-    spritesheet = NULL;
+bool collides(Entity e1, Entity e2) {
+    int aa = e1.r.x;
+    int ab = e1.r.x + e1.r.w;
+    int ac = e1.r.y;
+    int ad = e1.r.y + e1.r.h;
+
+    int ba = e2.r.x;
+    int bb = e2.r.x + e2.r.w;
+    int bc = e2.r.y;
+    int bd = e2.r.y + e2.r.h;
+    
+    if (ab > ba && aa < bb && ad > bc && ac < bd) {
+        return true;
+    }
+    return false;
 }
 
-void renderSprite(int x, int y, SDL_Rect* clip)
-{
-    SDL_Rect renderQuad = {x, y, 16, 16};
-    renderQuad.w = clip->w;
-    renderQuad.h = clip->h;
-    SDL_RenderCopy(gRenderer, spritesheet, clip, &renderQuad);
+bool entityCollision(Entity e, struct context *ctx) {
+    for (int y = 0; y < 15; y++) {
+        for (int x = 0; x < 16; x++) {
+            if (!ctx->tiles[(y * 16) + x].solid) continue;
+            if (collides(e, ctx->tiles[(y * 16) + x])) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-void init()
+void loop_handler(void *arg)
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
-    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_SOFTWARE);
-    SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    SDL_RenderSetScale(gRenderer, 2, 2);
-    int imgFlags = IMG_INIT_PNG;
-    IMG_Init(imgFlags);
+    struct context *ctx = arg;
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.key.keysym.sym)
+        {
+            case SDLK_UP:
+                if (event.key.type == SDL_KEYDOWN)
+                    ctx->up = true;
+                else if (event.key.type == SDL_KEYUP)
+                    ctx->up = false;
+                break;
+            case SDLK_DOWN:
+                if (event.key.type == SDL_KEYDOWN)
+                    ctx->down = true;
+                else if (event.key.type == SDL_KEYUP)
+                    ctx->down = false;
+                break;
+            case SDLK_LEFT:
+                if (event.key.type == SDL_KEYDOWN)
+                    ctx->left = true;
+                else if (event.key.type == SDL_KEYUP)
+                    ctx->left = false;
+                break;
+            case SDLK_RIGHT:
+                if (event.key.type == SDL_KEYDOWN)
+                    ctx->right = true;
+                else if (event.key.type == SDL_KEYUP)
+                    ctx->right = false;
+                break;
+            default:
+                break;
+        }
+    }
+
+    ctx->player.vx = 0;
+    ctx->player.vy = 0;
+    if (ctx->up) {
+        ctx->player.vy = -1;
+    }
+    if (ctx->right) {
+        ctx->player.vx = 1;
+    }
+    if (ctx->down) {
+        ctx->player.vy = 1;
+    }
+    if (ctx->left) {
+        ctx->player.vx = -1;
+    }
+
+    ctx->player.r.x += ctx->player.vx;
+    ctx->player.r.y += ctx->player.vy;
+
+    if (entityCollision(ctx->player, ctx)) {
+        bool resolved = false;
+        ctx->player.r.x -= ctx->player.vx;
+        if (entityCollision(ctx->player, ctx)) {
+            ctx->player.r.x += ctx->player.vx;
+        } else {
+            resolved = true;
+        }
+        if (!resolved) {
+            ctx->player.r.y -= ctx->player.vy;
+            if (entityCollision(ctx->player, ctx)) {
+                ctx->player.r.y += ctx->player.vy;
+            } else {
+                resolved = true;
+            }
+        }
+        if (!resolved) {
+            ctx->player.r.x -= ctx->player.vx;
+            ctx->player.r.y -= ctx->player.vy;
+        }
+    }
+
+    SDL_RenderClear(ctx->renderer);
+    for (int y = 0; y < 15; y++) {
+        for (int x = 0; x < 16; x++) {
+            int i = (y * 16) + x;
+            SDL_RenderCopy(ctx->renderer, ctx->spritesheet, &sprites[ctx->tiles[i].sprite], &ctx->tiles[i].r);
+        }
+    }
+    SDL_RenderCopy(ctx->renderer, ctx->spritesheet, &sprites[ctx->player.sprite], &ctx->player.r);
+    SDL_RenderPresent(ctx->renderer);
 }
 
-void loadMedia()
+void setSprites()
 {
-    loadSheetFromFile("assets/spritesheet.png");
-
     //link
     sprites[0].x = 0;
     sprites[0].y = 0;
@@ -119,72 +214,34 @@ void loadMedia()
     sprites[7].h = 16;
 }
 
-void stopit()
-{
-    //Free loaded images
-    freeSheet();
-
-    //Destroy window	
-    SDL_DestroyRenderer(gRenderer);
-    SDL_DestroyWindow(gWindow);
-    gWindow = NULL;
-    gRenderer = NULL;
-
-    //Quit SDL subsystems
-    IMG_Quit();
-    SDL_Quit();
-}
-
-bool collides(Entity e1, Entity e2) {
-    int aa = e1.x;
-    int ab = e1.x + e1.w;
-    int ac = e1.y;
-    int ad = e1.y + e1.h;
-
-    int ba = e2.x;
-    int bb = e2.x + e2.w;
-    int bc = e2.y;
-    int bd = e2.y + e2.h;
-    
-    if (ab > ba && aa < bb && ad > bc && ac < bd) {
-        return true;
-    }
-    return false;
-}
-
-bool entityCollision(Entity e) {
-    for (int y = 0; y < 15; y++) {
-        for (int x = 0; x < 16; x++) {
-            if (!tiles[(y * 16) + x].solid) continue;
-            if (collides(e, tiles[(y * 16) + x])) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
 
 int main(int argc, char* args[])
 {
-    //Start up SDL and create window
-    init();
-    loadMedia();
+    SDL_Window *window;
+    struct context ctx;
+
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &window, &ctx.renderer);
+    SDL_SetRenderDrawColor(ctx.renderer, 0, 0, 0, 0);
+
+    loadSpritesheet(&ctx);
+    setSprites();
+    
     //Main loop flag
-    bool quit = false;
-    bool up = false;
-    bool right = false;
-    bool down = false;
-    bool left = false;
-    Entity player;
-    player.x = 64;
-    player.y = 64;
-    player.w = 16;
-    player.h = 16;
+    //ctx->quit = false;
+    ctx.up = false;
+    ctx.right = false;
+    ctx.down = false;
+    ctx.left = false;
+    ctx.player.r.x = 64;
+    ctx.player.r.y = 64;
+    ctx.player.r.w = 16;
+    ctx.player.r.h = 16;
     Entity tempTile;
-    tempTile.w = 16;
-    tempTile.h = 16;
-    overworld = ""
+    tempTile.r.w = 16;
+    tempTile.r.h = 16;
+    char *overworld = ""
 "#######..#######"
 "#### #'..#######"
 "###'.....#######"
@@ -206,8 +263,8 @@ int main(int argc, char* args[])
         for (int x = 0; x < 16; x++) {
             cursor = (y * 16) + x;
             tileChar = overworld[cursor];
-            tempTile.x = x * 16;
-            tempTile.y = y * 16;
+            tempTile.r.x = x * 16;
+            tempTile.r.y = y * 16;
             tempTile.solid = true;
             if (tileChar == '/') {
                 tempTile.sprite = sprWallNW;
@@ -227,128 +284,15 @@ int main(int argc, char* args[])
             } else {
                 tempTile.sprite = sprWallS;
             }
-            tiles[(y * 16) + x] = tempTile;
+            ctx.tiles[(y * 16) + x] = tempTile;
         }
     }
 
-    //Event handler
-    SDL_Event e;
-
-    //While application is running
-    while (!quit)
-    {
-        //Handle events on queue
-        while (SDL_PollEvent(&e) != 0)
-        {
-            //User requests quit
-            if (e.type == SDL_QUIT)
-            {
-                quit = true;
-            }
-            else if (e.type == SDL_KEYDOWN)
-            {
-                switch (e.key.keysym.sym)
-                {
-                    case SDLK_UP:
-                        up = true;
-                        break;
-                    case SDLK_RIGHT:
-                        right = true;
-                        break;
-                    case SDLK_DOWN:
-                        down = true;
-                        break;
-                    case SDLK_LEFT:
-                        left = true;
-                        break;
-                }
-            }
-            else if (e.type == SDL_KEYUP)
-            {
-                switch (e.key.keysym.sym) {
-                    case SDLK_UP:
-                        up = false;
-                        break;
-                    case SDLK_RIGHT:
-                        right = false;
-                        break;
-                    case SDLK_DOWN:
-                        down = false;
-                        break;
-                    case SDLK_LEFT:
-                        left = false;
-                        break;
-                }
-            }
-        }
-
-        player.xSpeed = 0;
-        player.ySpeed = 0;
-        if (up) {
-            player.ySpeed = -1;
-        }
-        if (right) {
-            player.xSpeed = 1;
-        }
-        if (down) {
-            player.ySpeed = 1;
-        }
-        if (left) {
-            player.xSpeed = -1;
-        }
-
-        player.x += player.xSpeed;
-        player.y += player.ySpeed;
-
-        if (entityCollision(player)) {
-            bool resolved = false;
-            player.x -= player.xSpeed;
-            if (entityCollision(player)) {
-                player.x += player.xSpeed;
-            } else {
-                resolved = true;
-            }
-            if (!resolved) {
-                player.y -= player.ySpeed;
-                if (entityCollision(player)) {
-                    player.y += player.ySpeed;
-                } else {
-                    resolved = true;
-                }
-            }
-            if (!resolved) {
-                player.x -= player.xSpeed;
-                player.y -= player.ySpeed;
-            }
-        }
-
-        //Clear screen
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        SDL_RenderClear(gRenderer);
-
-        for (int y = 0; y < 15; y++) {
-            for (int x = 0; x < 16; x++) {
-                int i = (y * 16) + x;
-                renderSprite(tiles[i].x, tiles[i].y, &sprites[tiles[i].sprite]);
-            }
-        }
-
-        //Render top left sprite
-        renderSprite(player.x, player.y, &sprites[sprKink]);
-
-        if (entityCollision(player)) {
-            renderSprite(100, 100, &sprites[sprKink]);
-        }
-
-        //Update screen
-        SDL_RenderPresent(gRenderer);
-
-
+    emscripten_set_main_loop_arg(loop_handler, &ctx, -1, 1);
+    /*while (1) {
+        loop_handler(&ctx);
         usleep(16666);
-    }
-
-    //Free resources and close SDL
-    stopit();
+    }*/
 
     return 0;
 }
