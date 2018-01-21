@@ -6,7 +6,10 @@ and may not be redistributed without written permission.*/
 #include <SDL_image.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <unistd.h>
+#ifdef WEBBASED
 #include <emscripten.h>
+#endif
 
 #include "entity.h"
 #include "sprites.h"
@@ -222,8 +225,11 @@ int main(int argc, char* args[])
     struct context ctx;
 
     SDL_Init(SDL_INIT_VIDEO);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &window, &ctx.renderer);
     SDL_SetRenderDrawColor(ctx.renderer, 0, 0, 0, 0);
+    SDL_RenderSetScale(ctx.renderer, 2, 2);
+    IMG_Init(IMG_INIT_PNG);
 
     loadSpritesheet(&ctx);
     setSprites();
@@ -288,11 +294,15 @@ int main(int argc, char* args[])
         }
     }
 
+    #ifdef WEBBASED
     emscripten_set_main_loop_arg(loop_handler, &ctx, -1, 1);
-    /*while (1) {
+    #endif
+    #ifndef WEBBASED
+    while (1) {
         loop_handler(&ctx);
         usleep(16666);
-    }*/
+    }
+    #endif
 
     return 0;
 }
