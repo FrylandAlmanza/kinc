@@ -7,6 +7,7 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+
 #ifdef WEBBASED
 #include <emscripten.h>
 #endif
@@ -30,6 +31,7 @@ struct context
     bool down;
     bool left;
     bool right;
+    bool quit;
 };
 
 int loadSpritesheet(struct context *ctx)
@@ -84,6 +86,10 @@ void loop_handler(void *arg)
 
     while (SDL_PollEvent(&event))
     {
+        if (event.type == SDL_QUIT) {
+            ctx->quit = true;
+            return;
+        }
         switch (event.key.keysym.sym)
         {
             case SDLK_UP:
@@ -240,6 +246,7 @@ int main(int argc, char* args[])
     ctx.right = false;
     ctx.down = false;
     ctx.left = false;
+    ctx.quit = false;
     ctx.player.r.x = 64;
     ctx.player.r.y = 64;
     ctx.player.r.w = 16;
@@ -297,11 +304,26 @@ int main(int argc, char* args[])
     #ifdef WEBBASED
     emscripten_set_main_loop_arg(loop_handler, &ctx, -1, 1);
     #endif
+
     #ifndef WEBBASED
     while (1) {
+        if (ctx.quit == true) {
+            break;
+        }
         loop_handler(&ctx);
         usleep(16666);
     }
+
+    SDL_DestroyTexture(ctx.spritesheet);
+    ctx.spritesheet = NULL;
+
+    SDL_DestroyRenderer(ctx.renderer);
+    SDL_DestroyWindow(window);
+    ctx.renderer = NULL;
+    window = NULL;
+    
+    IMG_Quit();
+    SDL_Quit();
     #endif
 
     return 0;
