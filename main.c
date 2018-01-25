@@ -19,8 +19,6 @@ and may not be redistributed without written permission.*/
 const int SCREEN_WIDTH = 512;
 const int SCREEN_HEIGHT = 480;
 
-SDL_Rect sprites[8];
-
 struct context
 {
     SDL_Renderer *renderer;
@@ -160,6 +158,7 @@ void loop_handler(void *arg)
             ctx->player.r.y -= ctx->player.vy;
         }
     }
+    advanceAnimation(&ctx->player.animation);
 
     SDL_RenderClear(ctx->renderer);
     for (int y = 0; y < 15; y++) {
@@ -168,62 +167,9 @@ void loop_handler(void *arg)
             SDL_RenderCopy(ctx->renderer, ctx->spritesheet, &sprites[ctx->tiles[i].sprite], &ctx->tiles[i].r);
         }
     }
-    SDL_RenderCopy(ctx->renderer, ctx->spritesheet, &sprites[ctx->player.sprite], &ctx->player.r);
+    SDL_RenderCopy(ctx->renderer, ctx->spritesheet, getAnimationSprite(&ctx->player.animation), &ctx->player.r);
     SDL_RenderPresent(ctx->renderer);
 }
-
-void setSprites()
-{
-    //link
-    sprites[0].x = 0;
-    sprites[0].y = 0;
-    sprites[0].w = 16;
-    sprites[0].h = 16;
-
-    //tile1
-    sprites[1].x = 32;
-    sprites[1].y = 0;
-    sprites[1].w = 16;
-    sprites[1].h = 16;
-    
-    //tile2
-    sprites[2].x = 48;
-    sprites[2].y = 0;
-    sprites[2].w = 16;
-    sprites[2].h = 16;
-    
-    //tile3
-    sprites[3].x = 64;
-    sprites[3].y = 0;
-    sprites[3].w = 16;
-    sprites[3].h = 16;
-
-    //tile4
-    sprites[4].x = 32;
-    sprites[4].y = 16;
-    sprites[4].w = 16;
-    sprites[4].h = 16;
-    
-    //tile5
-    sprites[5].x = 48;
-    sprites[5].y = 16;
-    sprites[5].w = 16;
-    sprites[5].h = 16;
-    
-    //tile6
-    sprites[6].x = 64;
-    sprites[6].y = 16;
-    sprites[6].w = 16;
-    sprites[6].h = 16;
-
-    //tile7
-    sprites[7].x = 32;
-    sprites[7].y = 32;
-    sprites[7].w = 16;
-    sprites[7].h = 16;
-}
-
-
 
 int main(int argc, char* args[])
 {
@@ -239,6 +185,7 @@ int main(int argc, char* args[])
 
     loadSpritesheet(&ctx);
     setSprites();
+    setAnimations();
     
     //Main loop flag
     //ctx->quit = false;
@@ -251,6 +198,7 @@ int main(int argc, char* args[])
     ctx.player.r.y = 64;
     ctx.player.r.w = 16;
     ctx.player.r.h = 16;
+    ctx.player.animation = animations[0];
     Entity tempTile;
     tempTile.r.w = 16;
     tempTile.r.h = 16;
@@ -314,6 +262,7 @@ int main(int argc, char* args[])
         usleep(16666);
     }
 
+    freeAnimations();
     SDL_DestroyTexture(ctx.spritesheet);
     ctx.spritesheet = NULL;
 

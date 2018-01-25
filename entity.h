@@ -12,6 +12,7 @@ struct entity_struct {
     int vy;
     bool solid;
     enum sprite sprite;
+    struct animation animation;
 };
 
 #endif
