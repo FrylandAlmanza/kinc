@@ -3,7 +3,7 @@
 
 #include <SDL.h>
 
-SDL_Rect sprites[8];
+SDL_Rect *sprites;
 
 enum sprite {
     sprKink,

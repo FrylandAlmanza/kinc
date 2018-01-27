@@ -262,6 +262,7 @@ int main(int argc, char* args[])
         usleep(16666);
     }
 
+    free(sprites);
     freeAnimations();
     SDL_DestroyTexture(ctx.spritesheet);
     ctx.spritesheet = NULL;

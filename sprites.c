@@ -1,57 +1,51 @@
 #include "sprites.h"
+#include "lua.vm.js/lua/src/lua.h"
+#include "lua.vm.js/lua/src/lauxlib.h"
+#include "lua.vm.js/lua/src/lualib.h"
 
 int framec;
 int frame;
 
 void setSprites()
 {
-    //link
-    sprites[0].x = 0;
-    sprites[0].y = 0;
-    sprites[0].w = 16;
-    sprites[0].h = 16;
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
 
-    //tile1
-    sprites[1].x = 32;
-    sprites[1].y = 0;
-    sprites[1].w = 16;
-    sprites[1].h = 16;
-    
-    //tile2
-    sprites[2].x = 48;
-    sprites[2].y = 0;
-    sprites[2].w = 16;
-    sprites[2].h = 16;
-    
-    //tile3
-    sprites[3].x = 64;
-    sprites[3].y = 0;
-    sprites[3].w = 16;
-    sprites[3].h = 16;
+    luaL_loadfile(L, "assets/sprites.lua");
+    lua_pcall(L, 0, 0, 0);
+        /*error(L, "cannot run configuration file: %s",
+                lua_tostring(L, -1));*/
+    lua_getglobal(L, "sprite_count");
+    int sprite_count = (int)lua_tonumber(L, -1);
+    sprites = malloc(sprite_count * sizeof(SDL_Rect));
+    printf("sprite count: %d\n", sprite_count);
+    lua_pop(L, 1);
+    lua_getglobal(L, "sprites");
+    for (int i = 0; i < sprite_count; i++) {
+        lua_pushnumber(L, i);
+        lua_gettable(L, -2);
+        lua_pushstring(L, "x");
+        lua_gettable(L, -2);
+        sprites[i].x = (int)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pushstring(L, "y");
+        lua_gettable(L, -2);
+        sprites[i].y = (int)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pushstring(L, "w");
+        lua_gettable(L, -2);
+        sprites[i].w = (int)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pushstring(L, "h");
+        lua_gettable(L, -2);
+        sprites[i].h = (int)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_pop(L, 1);
+        printf("%d, %d, %d, %d\n", sprites[i].x, sprites[i].y, sprites[i].w, sprites[i].h);
+    }
+    lua_pop(L, 1);
 
-    //tile4
-    sprites[4].x = 32;
-    sprites[4].y = 16;
-    sprites[4].w = 16;
-    sprites[4].h = 16;
-    
-    //tile5
-    sprites[5].x = 48;
-    sprites[5].y = 16;
-    sprites[5].w = 16;
-    sprites[5].h = 16;
-    
-    //tile6
-    sprites[6].x = 64;
-    sprites[6].y = 16;
-    sprites[6].w = 16;
-    sprites[6].h = 16;
-
-    //tile7
-    sprites[7].x = 32;
-    sprites[7].y = 32;
-    sprites[7].w = 16;
-    sprites[7].h = 16;
+    lua_close(L);
 }
 
 void setAnimations() {
